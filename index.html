@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>หน้าปัดตราชั่ง</title>
+<style>
+body{font-family:"Sarabun","Noto Sans Thai",sans-serif;background:linear-gradient(160deg,#e6f3fc,#f8f5e6);margin:0;padding:12px;text-align:center;color:#2a4a7a;min-height:100vh}
+h1{font-size:22px;margin:6px 0}
+svg{width:100%;max-width:440px;touch-action:none}
+.btns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0}
+button{font:inherit;font-size:18px;padding:8px 16px;border:2px solid #4585de;background:#fff;color:#2a4a7a;border-radius:12px;cursor:pointer}
+button.on{background:#4585de;color:#fff}
+.read{font-size:30px;font-weight:bold;color:#d1453d;min-height:42px}
+label{font-size:16px;margin:0 8px;display:inline-block}
+input[type=range]{width:80%;max-width:360px}
+input[type=number]{font:inherit;width:60px;font-size:16px;padding:2px 6px}
+.box{background:#fff;border-radius:14px;padding:10px;margin:10px auto;max-width:460px}
+</style></head><body>
+<h1>⚖️ หน้าปัดตราชั่ง (1 กก. = 10 ขีด)</h1>
+<svg id="d" viewBox="0 0 400 400"></svg>
+<div class="read" id="read"></div>
+<div class="btns" id="presets"></div>
+<div class="btns"><button id="minus">◀ ลด 1 ขีด</button><button id="plus">เพิ่ม 1 ขีด ▶</button></div>
+<div class="box">
+<div>ลากเข็ม หรือเลื่อนแถบ เพื่อกำหนดเอง</div>
+<input type="range" id="s" min="0" max="50" step="1" value="0">
+<div>
+<label>หน้าปัดเต็มวง: <input type="number" id="maxkg" min="1" max="10" value="5"> กก.</label>
+<label><input type="checkbox" id="showNum" checked> แสดงตัวเลข</label>
+<label><input type="checkbox" id="showRead" checked> แสดงคำตอบ</label>
+</div></div>
+<script>
+const NS="http://www.w3.org/2000/svg",svg=document.getElementById('d');
+let maxkg=5,total=50,val=0;
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);(p||svg).appendChild(e);return e}
+const pt=(r,deg)=>{const a=deg*Math.PI/180;return[200+r*Math.sin(a),200-r*Math.cos(a)]};
+let needle,nums;
+function build(){
+ svg.innerHTML='';
+ el('circle',{cx:206,cy:207,r:190,fill:'#000','fill-opacity':.12});
+ el('circle',{cx:200,cy:200,r:190,fill:'#4585de'});
+ el('circle',{cx:200,cy:200,r:164,fill:'#fff'});
+ el('circle',{cx:200,cy:200,r:76,fill:'#e4f1fb'});
+ for(let i=0;i<total;i++){
+  const deg=i/total*360,major=i%10===0;
+  const[a,b]=pt(160,deg),[c,d]=pt(major?126:146,deg);
+  el('line',{x1:a,y1:b,x2:c,y2:d,stroke:major?'#2f63bb':'#d1453d','stroke-width':major?6:3,'stroke-linecap':'round'});
+ }
+ nums=el('g',{});
+ for(let k=0;k<maxkg;k++){
+  const[x,y]=pt(106,k/maxkg*360);
+  el('text',{x,y:y+11,'text-anchor':'middle','font-size':34,'font-weight':'bold',fill:'#2f63bb','font-family':'Arial,sans-serif'},nums).textContent=k;
+ }
+ nums.style.display=document.getElementById('showNum').checked?'':'none';
+ needle=el('g',{});
+ el('polygon',{points:'196,196 204,196 201,52 199,52',fill:'#d1453d'},needle);
+ el('rect',{x:196,y:196,width:8,height:20,fill:'#d1453d'},needle);
+ el('circle',{cx:200,cy:200,r:14,fill:'#d1453d'});
+ el('circle',{cx:200,cy:200,r:6,fill:'#fff'});
+}
+function fmt(v){const k=Math.floor(v/10),x=v%10;
+ if(!k&&!x)return '0';let s='';if(k)s+=k+' กิโลกรัม';if(x)s+=(s?' ':'')+x+' ขีด';return s}
+function set(v){val=Math.max(0,Math.min(total,Math.round(v)));
+ needle.setAttribute('transform',`rotate(${val/total*360} 200 200)`);
+ document.getElementById('read').textContent=document.getElementById('showRead').checked?fmt(val):'';
+ document.getElementById('s').value=val;
+ document.querySelectorAll('#presets button').forEach(b=>b.classList.toggle('on',+b.dataset.v===val));}
+[[10,'1 กิโลกรัม'],[15,'1 กก. 5 ขีด'],[5,'5 ขีด'],[2,'2 ขีด'],[8,'8 ขีด'],[0,'0']].forEach(([v,t])=>{
+ const b=document.createElement('button');b.textContent=t;b.dataset.v=v;b.onclick=()=>set(v);
+ document.getElementById('presets').appendChild(b)});
+function setMax(m){maxkg=Math.max(1,Math.min(10,Math.round(m)||5));total=maxkg*10;
+ document.getElementById('s').max=total;build();set(Math.min(val,total));}
+document.getElementById('maxkg').onchange=e=>setMax(+e.target.value);
+document.getElementById('s').oninput=e=>set(+e.target.value);
+document.getElementById('showNum').onchange=e=>nums.style.display=e.target.checked?'':'none';
+document.getElementById('showRead').onchange=()=>set(val);
+function drag(e){const r=svg.getBoundingClientRect(),sc=400/r.width;
+ const x=(e.clientX-r.left)*sc-200,y=(e.clientY-r.top)*sc-200;
+ let a=Math.atan2(x,-y)*180/Math.PI;if(a<0)a+=360;
+ let v=Math.round(a/360*total);if(v===0&&val>total/2)v=total;if(v===total&&val<total/2)v=0;set(v);}
+let down=false;
+svg.style.touchAction='none';svg.style.cursor='pointer';
+svg.addEventListener('pointerdown',function(e){down=true;try{svg.setPointerCapture(e.pointerId)}catch(_){}drag(e);e.preventDefault();});
+svg.addEventListener('pointermove',function(e){if(down){drag(e);e.preventDefault();}});
+['pointerup','pointercancel'].forEach(function(n){svg.addEventListener(n,function(){down=false;});});
+svg.addEventListener('mousedown',function(e){if(window.PointerEvent)return;down=true;drag(e)});
+window.addEventListener('mousemove',function(e){if(!window.PointerEvent&&down)drag(e)});
+window.addEventListener('mouseup',function(){down=false});
+svg.addEventListener('touchstart',function(e){if(window.PointerEvent)return;down=true;drag(e.touches[0]);e.preventDefault()},{passive:false});
+svg.addEventListener('touchmove',function(e){if(!window.PointerEvent&&down){drag(e.touches[0]);e.preventDefault()}},{passive:false});
+svg.addEventListener('touchend',function(){down=false});
+document.getElementById('minus').onclick=function(){set(val-1)};
+document.getElementById('plus').onclick=function(){set(val+1)};
+document.addEventListener('keydown',function(e){if(e.key==='ArrowRight'||e.key==='ArrowUp')set(val+1);if(e.key==='ArrowLeft'||e.key==='ArrowDown')set(val-1)});
+build();set(0);
+</script></body></html>
